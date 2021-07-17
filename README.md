@@ -47,7 +47,7 @@ overwriteValidator {
 }
 ```
 
-This plugin also supports a couple of setting used for configuring the output directory and location
+This plugin also supports a couple of settings used for configuring the output directory and location
 of the common project. Here they are configured to their default values:
 
 ```gradle
