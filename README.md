@@ -93,7 +93,7 @@ overwrite this class, set `reqired` to `true`.
 @OverwriteTarget(required = true)
 ```
 
-### Usiong Annotations to Validate Platform Code
+### Using Annotations to Validate Platform Code
 
 Now let's look at the platform code which overwrites this class.
 
