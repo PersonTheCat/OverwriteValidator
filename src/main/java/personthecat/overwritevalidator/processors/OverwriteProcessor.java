@@ -10,14 +10,22 @@ import spoon.reflect.declaration.CtField;
 import spoon.reflect.declaration.CtMethod;
 import spoon.reflect.declaration.CtType;
 
+import java.util.Set;
 import java.util.Objects;
 
 public class OverwriteProcessor extends AbstractProcessor<CtType<?>> {
+
+    private final Set<CtType<?>> processed;
+
+    public OverwriteProcessor(final Set<CtType<?>> processed) {
+        this.processed = processed;
+    }
 
     @Override
     public void process(final CtType<?> type) {
         if (CtUtils.anyMemberIsAnnotated(type, Overwrite.class)) {
             this.processMembers(type, LauncherContext.getOverwrittenClassOrThrow(type));
+            this.processed.add(type);
         }
     }
 

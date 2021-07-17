@@ -50,9 +50,12 @@ public class ManualImportProcessor {
         final File generatedSources = launcher.getEnvironment().getSourceOutputDirectory();
         for (final CtType<?> type : CtUtils.getAllClasses(launcher.getModel())) {
             final CtType<?> overwritten = LauncherContext.getOverwrittenClass(type);
-            if (overwritten != null) {
-                final String path = getRelativePath(javaSources, type.getPosition().getFile());
-                fixClassFile(new File(generatedSources, path), overwritten.getPosition().getFile());
+            final File typeFile = type.getPosition().getFile();
+            final File generated = new File(generatedSources, getRelativePath(javaSources, typeFile));
+            if (overwritten != null && generated.exists()) {
+                fixClassFile(generated, overwritten.getPosition().getFile());
+            } else {
+                copyFile(typeFile, generated);
             }
         }
     }
@@ -151,6 +154,14 @@ public class ManualImportProcessor {
             Files.write(f.toPath(), lines, Charset.defaultCharset());
         } catch (final IOException e) {
             throw new UncheckedIOException("Fixing imports", e);
+        }
+    }
+
+    private static void copyFile(final File source, final File destination) {
+        try {
+            Files.copy(source.toPath(), destination.toPath());
+        } catch (final IOException e) {
+            throw new UncheckedIOException("Copying file", e);
         }
     }
 }

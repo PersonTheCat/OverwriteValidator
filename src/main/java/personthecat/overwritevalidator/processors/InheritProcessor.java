@@ -14,16 +14,24 @@ import spoon.reflect.declaration.CtType;
 import spoon.reflect.declaration.CtTypeMember;
 
 import javax.annotation.Nonnull;
+import java.util.Set;
 import java.util.Objects;
 
 public class InheritProcessor extends AbstractProcessor<CtType<?>> {
 
     private static final String GENERATOR_NAME = InheritProcessor.class.getSimpleName();
 
+    private final Set<CtType<?>> processed;
+
+    public InheritProcessor(final Set<CtType<?>> processed) {
+        this.processed = processed;
+    }
+
     @Override
     public void process(final CtType<?> type) {
         if (CtUtils.anyMemberIsAnnotated(type, Inherit.class)) {
             this.processMembers(type, LauncherContext.getOverwrittenClassOrThrow(type));
+            this.processed.add(type);
         }
     }
 

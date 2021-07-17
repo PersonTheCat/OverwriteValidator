@@ -2,7 +2,13 @@ package personthecat.overwritevalidator;
 
 import org.gradle.api.Project;
 import org.gradle.api.plugins.JavaPluginConvention;
-import personthecat.overwritevalidator.processors.*;
+import personthecat.overwritevalidator.processors.InheritMissingMembersProcessor;
+import personthecat.overwritevalidator.processors.InheritProcessor;
+import personthecat.overwritevalidator.processors.ManualImportProcessor;
+import personthecat.overwritevalidator.processors.MissingOverwriteProcessor;
+import personthecat.overwritevalidator.processors.OverwriteClassProcessor;
+import personthecat.overwritevalidator.processors.OverwriteProcessor;
+import personthecat.overwritevalidator.processors.OverwriteTargetProcessor;
 import spoon.Launcher;
 import spoon.reflect.CtModel;
 import spoon.reflect.declaration.CtType;
@@ -12,6 +18,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -86,13 +93,16 @@ public final class LauncherContext {
         final OverwriteValidatorExtension config = OverwriteValidatorExtension.get(project);
         final CtModel model;
         if (config.generateCode()) {
+            final Set<CtType<?>> processed = new HashSet<>();
             launcher.setSourceOutputDirectory(config.getOutputDirectory());
             launcher.getEnvironment().setAutoImports(true);
-            launcher.addProcessor(new InheritMissingMembersProcessor());
-            launcher.addProcessor(new InheritProcessor());
-            launcher.addProcessor(new OverwriteClassProcessor());
-            launcher.addProcessor(new OverwriteProcessor());
+            launcher.addProcessor(new InheritMissingMembersProcessor(processed));
+            launcher.addProcessor(new InheritProcessor(processed));
+            launcher.addProcessor(new OverwriteClassProcessor(processed));
+            launcher.addProcessor(new OverwriteProcessor(processed));
+            launcher.setOutputFilter(processed::contains);
             launcher.run();
+
             ManualImportProcessor.fixImports(project, launcher);
             model = launcher.getModel();
         } else {

@@ -5,7 +5,11 @@ import org.gradle.api.Project;
 import org.gradle.api.Task;
 import javax.annotation.Nonnull;
 import java.io.File;
-import java.util.Set;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Comparator;
 
 public class OverwriteValidator implements Plugin<Project> {
 
@@ -32,14 +36,24 @@ public class OverwriteValidator implements Plugin<Project> {
     private static void runLauncher(final Project project, final Task compileJava) {
         final OverwriteValidatorExtension config = OverwriteValidatorExtension.get(project);
         if (!project.equals(config.getCommonProject())) {
-            if (!config.getOutputDirectory().delete()) {
-                System.err.println("Error deleting old classes. Extraneous files will be compiled.");
-            }
+            deleteDirectory(config.getOutputDirectory());
             LauncherContext.initStatic(project);
             LauncherContext.process(project);
             if (config.generateCode()) {
                 compileJava.setProperty("source", config.getOutputDirectory());
             }
+        }
+    }
+
+    private static void deleteDirectory(final File dir) {
+        try {
+            Files.walk(dir.toPath()).sorted(Comparator.reverseOrder()).map(Path::toFile).forEach(f -> {
+                if (!f.delete()) {
+                    System.err.println("Error deleting " + f);
+                }
+            });
+        } catch (final IOException e) {
+            throw new UncheckedIOException("Deleting files", e);
         }
     }
 }

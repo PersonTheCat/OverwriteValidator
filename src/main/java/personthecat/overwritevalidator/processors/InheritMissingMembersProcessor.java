@@ -13,9 +13,17 @@ import spoon.reflect.declaration.CtField;
 import spoon.reflect.declaration.CtMethod;
 import spoon.reflect.declaration.CtType;
 
+import java.util.Set;
+
 public class InheritMissingMembersProcessor extends AbstractProcessor<CtType<?>> {
 
     private static final String GENERATOR_NAME = InheritMissingMembersProcessor.class.getSimpleName();
+
+    private final Set<CtType<?>> processed;
+
+    public InheritMissingMembersProcessor(final Set<CtType<?>> processed) {
+        this.processed = processed;
+    }
 
     @Override
     public void process(final CtType<?> type) {
@@ -26,6 +34,7 @@ public class InheritMissingMembersProcessor extends AbstractProcessor<CtType<?>>
                 this.inheritMembers(type, overwritten);
                 this.inheritNestedClasses(type, overwritten);
                 type.removeAnnotation(a);
+                this.processed.add(type);
             }
         }
     }
