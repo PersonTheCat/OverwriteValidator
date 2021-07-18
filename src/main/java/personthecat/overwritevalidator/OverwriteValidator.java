@@ -8,7 +8,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.Comparator;
 
 public class OverwriteValidator implements Plugin<Project> {
@@ -47,9 +46,9 @@ public class OverwriteValidator implements Plugin<Project> {
 
     private static void deleteDirectory(final File dir) {
         try {
-            Files.walk(dir.toPath()).sorted(Comparator.reverseOrder()).map(Path::toFile).forEach(f -> {
-                if (!f.delete()) {
-                    System.err.println("Error deleting " + f);
+            Files.walk(dir.toPath()).sorted(Comparator.reverseOrder()).forEach(p -> {
+                if (!p.toFile().delete()) {
+                    System.err.println("Error deleting " + p);
                 }
             });
         } catch (final IOException e) {

@@ -21,6 +21,12 @@ public class MissingOverwriteProcessor {
     /** The header message for unreachable overrides. */
     private static final String UNREACHABLE_MEMBERS = "Unreachable members";
 
+    /** The header message when an overwrite has lower access. */
+    private static final String LOWER_ACCESS = "More restrictive access";
+
+    /** The header message when an overwrite has a different type of access. */
+    private static final String DIFFERENT_TYPE = "Static or instance mismatch";
+
     public static void processModel(final Project project, final CtModel model) {
         final ValidationContext ctx = validateAll(project, CtUtils.getAllClasses(model));
         if (ctx.anyErrors()) {
@@ -36,6 +42,7 @@ public class MissingOverwriteProcessor {
             if (overwritten != null) {
                 putMissingOverrides(ctx.missing, ctClass, overwritten);
                 putUnreachableConstants(ctx.unreachable, ctClass, overwritten);
+                putDifferentAccess(ctx, ctClass, overwritten);
             }
         }
         return ctx;
@@ -59,6 +66,22 @@ public class MissingOverwriteProcessor {
         }
     }
 
+    static void putDifferentAccess(final ValidationContext ctx, final CtType<?> type, final CtType<?> overwritten) {
+        final String relativeName = getRelativeName(type);
+        for (final CtTypeMember member : overwritten.getTypeMembers()) {
+            final CtTypeMember child = CtUtils.getOverriddenMember(type, member);
+
+            if (child != null) {
+                if (CtUtils.hasMoreRestrictiveAccess(child, member)) {
+                    ctx.lowerAccess.add(type.getQualifiedName(), CtUtils.formatMember(relativeName, member));
+                }
+                if (CtUtils.hasDifferentAccessType(child, member)) {
+                    ctx.differentType.add(type.getQualifiedName(), CtUtils.formatMember(relativeName, member));
+                }
+            }
+        }
+    }
+
     static String getRelativeName(final CtType<?> ctClass) {
         return ctClass.getQualifiedName().substring(ctClass.getPackage().getQualifiedName().length() + 1);
     }
@@ -73,6 +96,8 @@ public class MissingOverwriteProcessor {
     private static class ValidationContext {
         final MemberMap missing = new MemberMap();
         final MemberMap unreachable = new MemberMap();
+        final MemberMap lowerAccess = new MemberMap();
+        final MemberMap differentType = new MemberMap();
         final Project project;
 
         ValidationContext(final Project project) {
@@ -80,7 +105,7 @@ public class MissingOverwriteProcessor {
         }
 
         boolean anyErrors() {
-            return !(missing.isEmpty() && unreachable.isEmpty());
+            return !(missing.isEmpty() && unreachable.isEmpty() && lowerAccess.isEmpty() && differentType.isEmpty());
         }
 
         void printErrors() {
@@ -89,6 +114,12 @@ public class MissingOverwriteProcessor {
             }
             if (!this.unreachable.isEmpty()) {
                 System.err.println(createRedText(this.formatInvalidMembers(UNREACHABLE_MEMBERS, this.unreachable)));
+            }
+            if (!this.lowerAccess.isEmpty()) {
+                System.err.println(createRedText(this.formatInvalidMembers(LOWER_ACCESS, this.lowerAccess)));
+            }
+            if (!this.differentType.isEmpty()) {
+                System.err.println(createRedText(this.formatInvalidMembers(DIFFERENT_TYPE, this.differentType)));
             }
         }
 

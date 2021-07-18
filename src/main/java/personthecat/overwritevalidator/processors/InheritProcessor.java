@@ -48,6 +48,7 @@ public class InheritProcessor extends AbstractProcessor<CtType<?>> {
             final CtMethod<?> inherited = CtUtils.getOverriddenMethod(overwritten, method);
             if (a != null) {
                 method.setBody(this.validateInherited(type, inherited).getBody());
+                method.setParameters(inherited.getParameters());
                 CtUtils.markGenerated(method, GENERATOR_NAME);
                 method.removeAnnotation(a);
             } else if (inherited != null) {
@@ -78,6 +79,7 @@ public class InheritProcessor extends AbstractProcessor<CtType<?>> {
             final CtConstructor<?> inherited = CtUtils.getOverriddenConstructor(overwritten, constructor);
             if (a != null) {
                 constructor.setBody(this.validateInherited(type, inherited).getBody());
+                constructor.setParameters(inherited.getParameters());
                 CtUtils.markGenerated(constructor, GENERATOR_NAME);
                 constructor.removeAnnotation(a);
             } else if (inherited != null) {

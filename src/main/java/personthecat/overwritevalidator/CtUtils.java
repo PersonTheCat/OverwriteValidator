@@ -9,6 +9,7 @@ import spoon.reflect.declaration.CtElement;
 import spoon.reflect.declaration.CtExecutable;
 import spoon.reflect.declaration.CtField;
 import spoon.reflect.declaration.CtMethod;
+import spoon.reflect.declaration.CtModifiable;
 import spoon.reflect.declaration.CtPackage;
 import spoon.reflect.declaration.CtParameter;
 import spoon.reflect.declaration.CtType;
@@ -84,6 +85,19 @@ public final class CtUtils {
     }
 
     @Nullable
+    public static CtTypeMember getOverriddenMember(final CtType<?> overwritten, final CtTypeMember child) {
+        if (child instanceof CtMethod<?>) {
+            return getOverriddenMethod(overwritten, (CtMethod<?>) child);
+        } else if (child instanceof CtField<?>) {
+            return getOverriddenField(overwritten, (CtField<?>) child);
+        } else if (child instanceof CtConstructor<?>) {
+            return getOverriddenConstructor(overwritten, (CtConstructor<?>) child);
+        } else {
+            throw new UnsupportedOperationException("Must be a field or method");
+        }
+    }
+
+    @Nullable
     public static CtMethod<?> getOverriddenMethod(final CtType<?> overwritten, final CtMethod<?> child) {
         for (final CtMethod<?> parent : overwritten.getMethodsByName(child.getSimpleName())) {
             if (canOverrideMethod(child, parent)) {
@@ -91,6 +105,11 @@ public final class CtUtils {
             }
         }
         return null;
+    }
+
+    @Nullable
+    public static CtField<?> getOverriddenField(final CtType<?> overwritten, final CtField<?> child) {
+        return overwritten.getField(child.getSimpleName());
     }
 
     @Nullable
@@ -172,6 +191,23 @@ public final class CtUtils {
 
     public static boolean isAssignableTo(final CtTypeReference<?> child, final CtTypeReference<?> parent) {
         return child.isSubtypeOf(parent);
+    }
+
+    public static boolean hasMoreRestrictiveAccess(final CtTypeMember child, final CtTypeMember parent) {
+        return getVisibilityScale(child) < getVisibilityScale(parent);
+    }
+
+    private static int getVisibilityScale(final CtModifiable element) {
+        switch (element.getVisibility()) {
+            case PUBLIC: return 4;
+            case PROTECTED: return 3;
+            case PRIVATE: return 1;
+            default: return 2;
+        }
+    }
+
+    public static boolean hasDifferentAccessType(final CtTypeMember child, final CtTypeMember parent) {
+        return child.isStatic() != parent.isStatic();
     }
 
     @Nullable

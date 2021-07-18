@@ -9,9 +9,9 @@ import spoon.reflect.declaration.CtType;
 import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.regex.Matcher;
@@ -20,19 +20,10 @@ import java.util.regex.Pattern;
 public class ManualImportProcessor {
 
     /** Representing all possible imports in a Java source file.. */
-    private static final Pattern ALL_IMPORT_PATTERN = Pattern.compile("^\\s*import.*$");
-
-    /** Representing a collapsed import in a Java source file. */
-    private static final Pattern COLLAPSED_IMPORT_PATTERN = Pattern.compile("^\\s*import.*\\*.*$");
-
-    /** Representing a static import in a Java source file. */
-    private static final Pattern STATIC_IMPORT_PATTERN = Pattern.compile("^\\s*import.*\\s+static\\s+.*$");
-
-    /** Representing the nested type imports which are broken by Spoon. */
-    private static final Pattern BROKEN_IMPORT_PATTERN = Pattern.compile("^\\s*import\\s+([A-Z].*);.*$");
+    private static final Pattern IMPORT_PATTERN = Pattern.compile("^\\s*import\\s+(?:static\\s+)?(.*\\.(\\w+)).*;.*$");
 
     /** Representing the package declaration at the top of the file. */
-    private static final Pattern PACKAGE_PATTERN = Pattern.compile("^\\s*package.*$");
+    private static final Pattern PACKAGE_PATTERN = Pattern.compile("^\\s*package.*$", Pattern.MULTILINE);
 
     /**
      * This method is responsible for correcting a series of import-related errors
@@ -53,7 +44,7 @@ public class ManualImportProcessor {
             final File typeFile = type.getPosition().getFile();
             final File generated = new File(generatedSources, getRelativePath(javaSources, typeFile));
             if (overwritten != null && generated.exists()) {
-                fixClassFile(generated, overwritten.getPosition().getFile());
+                fixClassFile(type, generated, overwritten.getPosition().getFile());
             } else {
                 copyFile(typeFile, generated);
             }
@@ -71,20 +62,15 @@ public class ManualImportProcessor {
         throw new IllegalStateException("No matching source: " + filePath);
     }
 
-    private static void fixClassFile(final File generated, final File common) {
+    private static void fixClassFile(final CtType<?> type, final File generated, final File common) {
         final List<String> lines = readLines(generated);
-        final List<String> imports = getAllImports(lines);
-        final List<String> broken = getBrokenReferences(imports);
-        final List<String> missing = getMissingImports(readLines(common));
+        final Set<ImportData> generatedImports = getImports(lines);
+        final String content = removeImports(generatedImports, String.join("\n", lines));
 
-        if (broken.isEmpty() && missing.isEmpty()) {
-            return;
-        }
+        final Set<ImportData> imports = getImports(readLines(common));
+        imports.addAll(generatedImports);
 
-        final int index = getPackageIndex(lines) + 1;
-        lines.addAll(index, missing);
-        lines.removeIf(broken::contains);
-        writeLines(generated, lines);
+        writeFile(generated, addImports(imports, removePaths(type, imports, content)));
     }
 
     private static List<String> readLines(final File f) {
@@ -95,63 +81,54 @@ public class ManualImportProcessor {
         }
     }
 
-    private static List<String> getAllImports(final List<String> lines) {
-        final List<String> imports = new ArrayList<>();
+    private static Set<ImportData> getImports(final List<String> lines) {
+        final Set<ImportData> imports = new HashSet<>();
         for (final String line : lines) {
-            if (ALL_IMPORT_PATTERN.matcher(line).matches()) {
-                imports.add(line);
+            final Matcher m = IMPORT_PATTERN.matcher(line);
+            if (m.matches()) {
+                imports.add(new ImportData(m.group(0), m.group(1), m.group(2)));
             }
         }
         return imports;
     }
 
-    // Spoon breaks nested class references by importing them as a package.
-    private static List<String> getBrokenReferences(final List<String> imports) {
-        final List<String> broken = new ArrayList<>();
-        for (final String i : imports) {
-            final Matcher matcher = BROKEN_IMPORT_PATTERN.matcher(i);
-            if (matcher.matches() && isBroken(imports, i, matcher.group(1))) {
-                broken.add(i);
-            }
+    private static String removeImports(final Set<ImportData> data, String content) {
+        for (final ImportData i : data) {
+            content = content.replace(i.statement, "");
         }
-        return broken;
+        return content;
     }
 
-    private static boolean isBroken(final List<String> imports, final String i, final String ref) {
-        for (final String i2 : imports) {
-            // Not the same line, but does contain the reference
-            if (!i.equals(i2) && i2.contains(ref)) {
-                return true;
-            }
+    private static String removePaths(final CtType<?> type, final Set<ImportData> data, String content) {
+        for (final ImportData i : data) {
+            content = content.replace(i.path, i.reference);
         }
-        return false;
+        return content.replace(type.getPackage().getQualifiedName() + ".", "")
+            .replace("java.lang.", "");
     }
 
-    // These types of imports are never copied by Spoon.
-    private static List<String> getMissingImports(final List<String> lines) {
-        final List<String> imports = new ArrayList<>();
-        for (final String line : lines) {
-            if (COLLAPSED_IMPORT_PATTERN.matcher(line).matches() || STATIC_IMPORT_PATTERN.matcher(line).matches()) {
-                imports.add(line);
-            }
+    private static String addImports(final Set<ImportData> data, final String content) {
+        final int index = getPackageIndex(content) + 1;
+        final StringBuilder sb = new StringBuilder(content.substring(0, index));
+
+        for (final ImportData i : data) {
+            sb.append(i.statement);
+            sb.append(System.lineSeparator());
         }
-        return imports;
+        return sb.append(content.substring(index)).toString();
     }
 
-    private static int getPackageIndex(final List<String> lines) {
-        int num = 0;
-        for (final String line : lines) {
-            if (PACKAGE_PATTERN.matcher(line).matches()) {
-                return num;
-            }
-            num++;
+    private static int getPackageIndex(final String content) {
+        final Matcher matcher = PACKAGE_PATTERN.matcher(content);
+        if (!matcher.find()) {
+            throw new IllegalStateException("No package declaration in Java file.");
         }
-        throw new IllegalStateException("No package declaration in Java file.");
+        return matcher.end();
     }
 
-    private static void writeLines(final File f, final List<String> lines) {
+    private static void writeFile(final File f, final String content) {
         try {
-            Files.write(f.toPath(), lines, Charset.defaultCharset());
+            Files.write(f.toPath(), content.getBytes(StandardCharsets.UTF_8));
         } catch (final IOException e) {
             throw new UncheckedIOException("Fixing imports", e);
         }
@@ -162,6 +139,23 @@ public class ManualImportProcessor {
             Files.copy(source.toPath(), destination.toPath());
         } catch (final IOException e) {
             throw new UncheckedIOException("Copying file", e);
+        }
+    }
+
+    private static class ImportData {
+        final String statement;
+        final String path;
+        final String reference;
+
+        ImportData(final String statement, final String path, final String reference) {
+            this.statement = statement;
+            this.path = path;
+            this.reference = reference;
+        }
+
+        @Override
+        public int hashCode() {
+            return this.reference.hashCode();
         }
     }
 }

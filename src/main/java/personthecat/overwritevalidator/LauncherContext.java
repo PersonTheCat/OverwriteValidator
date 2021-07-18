@@ -95,7 +95,6 @@ public final class LauncherContext {
         if (config.generateCode()) {
             final Set<CtType<?>> processed = new HashSet<>();
             launcher.setSourceOutputDirectory(config.getOutputDirectory());
-            launcher.getEnvironment().setAutoImports(true);
             launcher.addProcessor(new InheritMissingMembersProcessor(processed));
             launcher.addProcessor(new InheritProcessor(processed));
             launcher.addProcessor(new OverwriteClassProcessor(processed));
