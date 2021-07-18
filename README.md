@@ -183,3 +183,14 @@ public class Demo {
 }
 ```
 
+### This Project is Powered by [Spoon!](https://spoon.gforge.inria.fr/)
+
+And this may have been a mistake. Spoon does not have the context it needs to understand where most
+references are coming from. One of the consequences of this problem is that generated code very
+frequently winds up with broken references and imports. 
+
+I have done my best to fix this, thanks to this project's very restrictive use case, which gives me
+enough information to reconstruct the broken code. But, this is not a very solid foundation. If you
+have suggestions or can help me improve this project, **please** create an issue here on GitHub.
+
+Thanks!
