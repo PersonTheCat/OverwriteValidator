@@ -19,7 +19,7 @@ buildscript {
         maven { url 'https://jitpack.io' }
     }
     dependencies {
-        classpath group: 'com.github.PersonTheCat', name: 'OverwriteValidator', version: '1.4'
+        classpath group: 'com.github.PersonTheCat', name: 'OverwriteValidator', version: '1.5'
     }
 }
 
