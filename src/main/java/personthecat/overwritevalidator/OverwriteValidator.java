@@ -45,6 +45,9 @@ public class OverwriteValidator implements Plugin<Project> {
     }
 
     private static void deleteDirectory(final File dir) {
+        if (!dir.exists()) {
+            return;
+        }
         try {
             Files.walk(dir.toPath()).sorted(Comparator.reverseOrder()).forEach(p -> {
                 if (!p.toFile().delete()) {

@@ -99,7 +99,7 @@ public class InheritProcessor extends AbstractProcessor<CtType<?>> {
 
     @Nonnull
     private <T extends CtTypeMember> T validateInherited(final CtType<?> type, final T member) {
-        Objects.requireNonNull(member, "No overwrite target for member: " + type.getSimpleName());
+        Objects.requireNonNull(member, "No overwrite target for member: " + member.getSimpleName());
         if (CtUtils.hasAnnotation(type, member, PlatformMustOverwrite.class)) {
             throw new IllegalOverwriteException(type, member);
         }

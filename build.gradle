@@ -1,7 +1,7 @@
 apply plugin: 'java'
 
 group = "personthecat"
-version = "1.4"
+version = "1.5"
 
 repositories {
     maven { url = 'https://jitpack.io' }
