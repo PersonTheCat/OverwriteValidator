@@ -135,6 +135,10 @@ public class ManualImportProcessor {
     }
 
     private static void copyFile(final File source, final File destination) {
+        final File parent = destination.getParentFile();
+        if (!(parent.exists() || parent.mkdirs())) {
+            throw new IllegalStateException("Creating folder");
+        }
         try {
             Files.copy(source.toPath(), destination.toPath());
         } catch (final IOException e) {
