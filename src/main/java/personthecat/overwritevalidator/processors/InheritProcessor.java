@@ -28,6 +28,11 @@ public class InheritProcessor extends AbstractProcessor<CtType<?>> {
     }
 
     @Override
+    public boolean isToBeProcessed(final CtType<?> type) {
+        return type.isTopLevel();
+    }
+
+    @Override
     public void process(final CtType<?> type) {
         if (CtUtils.anyMemberIsAnnotated(type, Inherit.class)) {
             this.processMembers(type, LauncherContext.getOverwrittenClassOrThrow(type));

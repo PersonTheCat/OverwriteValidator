@@ -22,6 +22,11 @@ public class OverwriteProcessor extends AbstractProcessor<CtType<?>> {
     }
 
     @Override
+    public boolean isToBeProcessed(final CtType<?> type) {
+        return type.isTopLevel();
+    }
+
+    @Override
     public void process(final CtType<?> type) {
         if (CtUtils.anyMemberIsAnnotated(type, Overwrite.class)) {
             this.processMembers(type, LauncherContext.getOverwrittenClassOrThrow(type));

@@ -26,6 +26,11 @@ public class InheritMissingMembersProcessor extends AbstractProcessor<CtType<?>>
     }
 
     @Override
+    public boolean isToBeProcessed(final CtType<?> type) {
+        return type.isTopLevel();
+    }
+
+    @Override
     public void process(final CtType<?> type) {
         if (type.isTopLevel()) {
             final CtAnnotation<?> a = CtUtils.getAnnotation(type, InheritMissingMembers.class);

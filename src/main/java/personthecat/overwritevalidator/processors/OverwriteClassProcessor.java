@@ -18,6 +18,11 @@ public class OverwriteClassProcessor extends AbstractProcessor<CtType<?>> {
     }
 
     @Override
+    public boolean isToBeProcessed(final CtType<?> type) {
+        return type.isTopLevel();
+    }
+
+    @Override
     public void process(final CtType<?> type) {
         final CtAnnotation<?> a = CtUtils.getAnnotation(type, OverwriteClass.class);
         if (a != null) {
