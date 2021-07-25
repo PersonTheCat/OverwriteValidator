@@ -11,9 +11,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -67,8 +65,11 @@ public class ManualImportProcessor {
         final Set<ImportData> generatedImports = getImports(lines);
         final String content = removeImports(generatedImports, String.join("\n", lines));
 
-        final Set<ImportData> imports = getImports(readLines(common));
-        imports.addAll(generatedImports);
+        final Set<ImportData> commonImports = getImports(readLines(common));
+        commonImports.addAll(generatedImports);
+
+        final List<ImportData> imports = new ArrayList<>(commonImports);
+        imports.sort(Comparator.comparing(i -> i.reference));
 
         writeFile(generated, addImports(imports, removePaths(type, imports, content)));
     }
@@ -94,28 +95,29 @@ public class ManualImportProcessor {
 
     private static String removeImports(final Set<ImportData> data, String content) {
         for (final ImportData i : data) {
-            content = content.replace(i.statement, "");
+            content = content.replaceAll(i.statement + ".*\n", "");
         }
         return content;
     }
 
-    private static String removePaths(final CtType<?> type, final Set<ImportData> data, String content) {
+    private static String removePaths(final CtType<?> type, final Collection<ImportData> data, String content) {
         for (final ImportData i : data) {
-            content = content.replace(i.path, i.reference);
+            content = content.replaceAll("(?<!import\\s)" + i.path + "(?!\\w)", i.reference);
         }
         return content.replace(type.getPackage().getQualifiedName() + ".", "")
-            .replace("java.lang.", "");
+            .replace("java.lang.", "")
+            .replaceAll("(?<!\\w)\\.class", type.getSimpleName() + ".class");
     }
 
-    private static String addImports(final Set<ImportData> data, final String content) {
+    private static String addImports(final Collection<ImportData> data, final String content) {
         final int index = getPackageIndex(content) + 1;
-        final StringBuilder sb = new StringBuilder(content.substring(0, index));
+        final StringBuilder sb = new StringBuilder(content.substring(0, index)).append('\n');
 
         for (final ImportData i : data) {
             sb.append(i.statement);
             sb.append(System.lineSeparator());
         }
-        return sb.append(content.substring(index)).toString();
+        return sb.append('\n').append(content.substring(index)).toString();
     }
 
     private static int getPackageIndex(final String content) {
@@ -155,6 +157,14 @@ public class ManualImportProcessor {
             this.statement = statement;
             this.path = path;
             this.reference = reference;
+        }
+
+        @Override
+        public boolean equals(final Object o) {
+            if (!(o instanceof ImportData)) {
+                return false;
+            }
+            return this.reference.equals(((ImportData) o).reference);
         }
 
         @Override
