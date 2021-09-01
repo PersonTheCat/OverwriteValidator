@@ -102,10 +102,11 @@ public class ManualImportProcessor {
 
     private static String removePaths(final CtType<?> type, final Collection<ImportData> data, String content) {
         for (final ImportData i : data) {
-            content = content.replaceAll("(?<!import\\s)" + i.path + "(?!\\w)", i.reference);
+            content = content.replaceAll("(?<!import\\s(?:static\\s)?)" + i.path + "(?!\\w)", i.reference);
         }
-        return content.replace(type.getPackage().getQualifiedName() + ".", "")
-            .replace("java.lang.", "")
+        return content.replaceAll("(?<!import\\s(?:static\\s)?)" + type.getPackage().getQualifiedName() + "(?:"+ type.getSimpleName() + ")?\\.(?!\\w+\\.)", "")
+            .replace(type.getQualifiedName(), type.getSimpleName())
+            .replaceAll("(?<!import\\s(?:static\\s)?)java\\.lang\\.(?!\\w+\\.)", "")
             .replaceAll("(?<!\\w)\\.class", type.getSimpleName() + ".class");
     }
 
